@@ -1,0 +1,10 @@
+2025-05-23 20:18:36,786 - DEBUG - tasks.xlsx already exists in destination
+2025-05-23 20:18:40,067 - ERROR - Error starting servers: [WinError 2] The system cannot find the file specified
+2025-05-23 20:18:40,072 - INFO - Servers already stopped
+2025-05-23 20:18:44,756 - ERROR - Error starting servers: [WinError 2] The system cannot find the file specified
+2025-05-23 20:18:44,757 - INFO - Servers already stopped
+2025-05-23 20:18:45,379 - ERROR - Error starting servers: [WinError 2] The system cannot find the file specified
+2025-05-23 20:18:45,379 - INFO - Servers already stopped
+2025-05-23 20:18:46,190 - ERROR - Error starting servers: [WinError 2] The system cannot find the file specified
+2025-05-23 20:18:46,191 - INFO - Servers already stopped
+2025-05-23 20:18:58,822 - INFO - Servers already stopped
