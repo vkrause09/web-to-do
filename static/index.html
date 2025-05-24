@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .header img {
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+        }
+        h1 {
+            color: #333;
+            margin: 0;
+            flex-grow: 1;
+            text-align: center;
+            font-size: 24px;
+        }
+        #current-time {
+            font-size: 14px;
+            color: #333;
+            font-weight: bold;
+        }
+        .container {
+            display: flex;
+            gap: 15px;
+            height: calc(100vh - 100px);
+        }
+        .tasks, .data {
+            flex: 1;
+            background: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .tasks {
+            max-height: 100%;
+            overflow-y: auto;
+        }
+        .tasks h2, .data h2, .data h3 {
+            margin: 0 0 10px;
+            color: #333;
+            font-size: 18px;
+        }
+        #task-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .task-item {
+            padding: 8px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            font-size: 14px;
+        }
+        .task-item span {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+        .task-item input[type="text"] {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 10px;
+            width: 150px;
+            font-size: 12px;
+        }
+        .task-item button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 5px;
+            font-size: 12px;
+        }
+        .task-item .complete-btn {
+            background-color: #28a745;
+            color: white;
+        }
+        .task-item .complete-btn:hover {
+            background-color: #218838;
+        }
+        .task-item .cannot-complete-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        .task-item .cannot-complete-btn:hover {
+            background-color: #c82333;
+        }
+        .data-charts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: space-between;
+        }
+        .chart-container {
+            width: 48%;
+            max-width: 250px;
+        }
+        #pass-fail-chart, #turn-around-chart, #open-close-chart, #types-chart {
+            width: 100%;
+            height: 200px;
+            margin: 10px auto;
+        }
+        .pass-fail-counts, .turn-around-data, .open-close-data, .types-data, .tasks-completed {
+            text-align: center;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+        .pass-fail-counts span, .turn-around-data span, .open-close-data span, .types-data span, .tasks-completed span {
+            margin: 0 5px;
+        }
+        .pass-count {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .fail-count {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .tasks-completed-count {
+            color: #007bff;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            text-align: center;
+            display: none;
+            font-size: 14px;
+        }
+        .no-tasks {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="https://via.placeholder.com/40" alt="Task Manager Icon">
+        <h1>Task Manager</h1>
+        <div id="current-time"></div>
+    </div>
+    <p id="error" class="error"></p>
+    <div class="container">
+        <div class="tasks">
+            <h2>Tasks To Do</h2>
+            <ul id="task-list"></ul>
+        </div>
+        <div class="data">
+            <h2>Data</h2>
+            <h3>Tasks Completed This Week</h3>
+            <p id="tasks-completed" class="tasks-completed"></p>
+            <div class="data-charts">
+                <div class="chart-container">
+                    <h3>Pass/Fail</h3>
+                    <p id="pass-fail-counts" class="pass-fail-counts"></p>
+                    <canvas id="pass-fail-chart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Turn Around Time</h3>
+                    <p id="turn-around-data" class="turn-around-data"></p>
+                    <canvas id="turn-around-chart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Open/Close Monthly</h3>
+                    <p id="open-close-data" class="open-close-data"></p>
+                    <canvas id="open-close-chart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Task Types</h3>
+                    <p id="types-data" class="types-data"></p>
+                    <canvas id="types-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateTime() {
+            const timeElement = document.getElementById('current-time');
+            const now = new Date();
+            timeElement.textContent = now.toLocaleTimeString('en-US', { hour12: true });
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        async function fetchTasks() {
+            try {
+                console.log('Fetching tasks from http://localhost:8080/tasks');
+                const response = await fetch('http://localhost:8080/tasks');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const tasks = await response.json();
+                console.log('Received tasks:', tasks);
+                displayTasks(tasks);
+            } catch (error) {
+                console.error('Error fetching tasks:', error);
+                showError('Failed to load tasks: ' + error.message);
+            }
+        }
+
+        function displayTasks(tasks) {
+            console.log('Displaying tasks:', tasks);
+            const taskList = document.getElementById('task-list');
+            taskList.innerHTML = '';
+            if (!Array.isArray(tasks) || tasks.length === 0) {
+                taskList.innerHTML = '<li class="no-tasks">No tasks available</li>';
+                console.warn('No valid tasks to display');
+                return;
+            }
+            tasks.slice(0, 20).forEach(task => {
+                if (task.name && task.priority && task.date_added) {
+                    const li = document.createElement('li');
+                    li.className = 'task-item';
+                    li.innerHTML = `
+                        <span>${task.name} (Priority: ${task.priority}, Added: ${task.date_added})</span>
+                        <input type="text" id="comment-${task.name}" placeholder="Add comment">
+                        <button class="complete-btn" onclick="completeTask('${task.name}', 'Completed')">Complete</button>
+                        <button class="cannot-complete-btn" onclick="completeTask('${task.name}', 'Cannot Complete')">Cannot Complete</button>
+                    `;
+                    taskList.appendChild(li);
+                } else {
+                    console.warn('Skipping invalid task:', task);
+                }
+            });
+        }
+
+        async function completeTask(taskName, status) {
+            const commentInput = document.getElementById(`comment-${taskName}`);
+            const comment = commentInput.value.trim();
+            try {
+                const response = await fetch('http://localhost:8080/tasks/complete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name: taskName, comment: comment, status: status }),
+                });
+                if (!response.ok) {
+                    throw new Error(`Failed to mark task as ${status}`);
+                }
+                fetchTasks();
+                fetchTasksCompletedThisWeek();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function fetchPassFail() {
+            try {
+                const response = await fetch('http://localhost:8080/pass_fail');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch pass/fail data');
+                }
+                const data = await response.json();
+                renderPieChart(data);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function renderPieChart(data) {
+            const countsElement = document.getElementById('pass-fail-counts');
+            countsElement.innerHTML = `
+                <span class="pass-count">Pass: ${data.pass || 0}</span>
+                <span class="fail-count">Fail: ${data.fail || 0}</span>
+            `;
+
+            const ctx = document.getElementById('pass-fail-chart').getContext('2d');
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Pass', 'Fail'],
+                    datasets: [{
+                        data: [data.pass || 0, data.fail || 0],
+                        backgroundColor: ['#28a745', '#dc3545'],
+                        borderColor: ['#fff', '#fff'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Pass/Fail on ${data.date || 'Unknown'}`,
+                            font: { size: 14 }
+                        },
+                        legend: {
+                            position: 'bottom',
+                            labels: { font: { size: 12 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function fetchTurnAroundTime() {
+            try {
+                const response = await fetch('http://localhost:8080/turn_around_time');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch turn around time data');
+                }
+                const data = await response.json();
+                renderTurnAroundChart(data);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function renderTurnAroundChart(data) {
+            const turnAroundElement = document.getElementById('turn-around-data');
+            if (!data || data.length === 0) {
+                turnAroundElement.innerHTML = '<span>No data available</span>';
+                return;
+            }
+
+            const months = [];
+            const times = [];
+            data.forEach(item => {
+                try {
+                    const date = new Date(item.date);
+                    if (!isNaN(date.getTime()) && typeof item.turn_around_time === 'number') {
+                        months.push(date.toLocaleString('en-US', { month: 'long', year: 'numeric' }));
+                        times.push(item.turn_around_time);
+                    }
+                } catch (e) {
+                    console.error('Invalid data item:', item);
+                }
+            });
+
+            if (times.length === 0) {
+                turnAroundElement.innerHTML = '<span>No valid data available</span>';
+                return;
+            }
+
+            const average = (times.reduce((sum, val) => sum + val, 0) / times.length).toFixed(2);
+            turnAroundElement.innerHTML = `
+                ${data.map(item => {
+                    try {
+                        const date = new Date(item.date);
+                        return `<span>${date.toLocaleString('en-US', { month: 'short', year: 'numeric' })}: ${item.turn_around_time} days</span>`;
+                    } catch (e) {
+                        return '';
+                    }
+                }).filter(str => str).join('')}
+                <br><span style="font-weight: bold;">Avg: ${average} days</span>
+            `;
+
+            const ctx = document.getElementById('turn-around-chart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Turn Around Time',
+                        data: times,
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Turn Around Time',
+                            font: { size: 14 }
+                        },
+                        legend: {
+                            position: 'bottom',
+                            labels: { font: { size: 12 } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Days', font: { size: 12 } },
+                            ticks: { font: { size: 10 } }
+                        },
+                        x: { ticks: { font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        async function fetchOpenCloseMonthly() {
+            try {
+                const response = await fetch('http://localhost:8080/open_close_monthly');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch open/close monthly data');
+                }
+                const data = await response.json();
+                renderOpenCloseChart(data);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function renderOpenCloseChart(data) {
+            const openCloseElement = document.getElementById('open-close-data');
+            if (!data || data.length === 0) {
+                openCloseElement.innerHTML = '<span>No data available</span>';
+                return;
+            }
+
+            const months = [];
+            const openValues = [];
+            const closeValues = [];
+            data.forEach(item => {
+                try {
+                    const date = new Date(item.date);
+                    if (!isNaN(date.getTime()) && typeof item.open === 'number' && typeof item.close === 'number') {
+                        months.push(date.toLocaleString('en-US', { month: 'long', year: 'numeric' }));
+                        openValues.push(item.open);
+                        closeValues.push(item.close);
+                    }
+                } catch (e) {
+                    console.error('Invalid open/close data item:', item);
+                }
+            });
+
+            if (openValues.length === 0 || closeValues.length === 0) {
+                openCloseElement.innerHTML = '<span>No valid data available</span>';
+                return;
+            }
+
+            const openAverage = (openValues.reduce((sum, val) => sum + val, 0) / openValues.length).toFixed(2);
+            const closeAverage = (closeValues.reduce((sum, val) => sum + val, 0) / closeValues.length).toFixed(2);
+            openCloseElement.innerHTML = `
+                ${data.map(item => {
+                    try {
+                        const date = new Date(item.date);
+                        return `<span>${date.toLocaleString('en-US', { month: 'short', year: 'numeric' })}: O:${item.open}, C:${item.close}</span>`;
+                    } catch (e) {
+                        return '';
+                    }
+                }).filter(str => str).join('')}
+                <br><span style="font-weight: bold;">O Avg: ${openAverage}, C Avg: ${closeAverage}</span>
+            `;
+
+            const ctx = document.getElementById('open-close-chart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [
+                        {
+                            label: 'Open',
+                            data: openValues,
+                            borderColor: '#28a745',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Close',
+                            data: closeValues,
+                            borderColor: '#dc3545',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Open/Close Monthly',
+                            font: { size: 14 }
+                        },
+                        legend: {
+                            position: 'bottom',
+                            labels: { font: { size: 12 } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Tasks', font: { size: 12 } },
+                            ticks: { font: { size: 10 } }
+                        },
+                        x: { ticks: { font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        async function fetchTypes() {
+            try {
+                const response = await fetch('http://localhost:8080/types');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch types data');
+                }
+                const data = await response.json();
+                renderTypesChart(data);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function renderTypesChart(data) {
+            const typesElement = document.getElementById('types-data');
+            if (!data || data.length === 0) {
+                typesElement.innerHTML = '<span>No types data available</span>';
+                return;
+            }
+
+            const types = [];
+            const quantities = [];
+            data.forEach(item => {
+                if (item.type && typeof item.qty === 'number') {
+                    types.push(item.type);
+                    quantities.push(item.qty);
+                } else {
+                    console.warn('Skipping invalid type item:', item);
+                }
+            });
+
+            if (quantities.length === 0) {
+                typesElement.innerHTML = '<span>No valid types data available</span>';
+                return;
+            }
+
+            typesElement.innerHTML = `
+                ${data.map(item => item.type && typeof item.qty === 'number' ? `<span>${item.type}: ${item.qty}</span>` : '').filter(str => str).join('')}
+            `;
+
+            const ctx = document.getElementById('types-chart').getContext('2d');
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: types,
+                    datasets: [{
+                        data: quantities,
+                        backgroundColor: ['#28a745', '#dc3545', '#007bff', '#ffc107', '#6f42c1'],
+                        borderColor: ['#fff', '#fff', '#fff', '#fff', '#fff'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Task Types',
+                            font: { size: 14 }
+                        },
+                        legend: {
+                            position: 'bottom',
+                            labels: { font: { size: 12 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function fetchTasksCompletedThisWeek() {
+            try {
+                const response = await fetch('http://localhost:8080/tasks_completed_this_week');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch tasks completed this week');
+                }
+                const data = await response.json();
+                renderTasksCompletedThisWeek(data);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function renderTasksCompletedThisWeek(data) {
+            const tasksCompletedElement = document.getElementById('tasks-completed');
+            tasksCompletedElement.innerHTML = `
+                <span class="tasks-completed-count">Tasks Completed This Week: ${data.count || 0}</span>
+            `;
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('error');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 3000);
+        }
+
+        window.onload = () => {
+            fetchTasks();
+            fetchPassFail();
+            fetchTurnAroundTime();
+            fetchOpenCloseMonthly();
+            fetchTypes();
+            fetchTasksCompletedThisWeek();
+        };
+    </script>
+</body>
+</html>
