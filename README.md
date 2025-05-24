@@ -34,14 +34,22 @@ Go Server: Runs on http://localhost:8080 (access the web interface here)
 
 File Structure
 task_manager/
+
 ├── api.py                # Python Flask API for data processing
+
 ├── main.go               # Go server for frontend and API proxy
+
 ├── static/
 │   └── index.html        # Frontend HTML with Chart.js visualizations
+
 ├── tasks.xlsx            # Excel file with task data (generated)
+
 ├── launcher.py           # Tkinter GUI to start/stop servers
+
 ├── server                # Compiled Go binary (server.exe on Windows)
+
 └── server.log            # Log file for server output
+
 
 Prerequisites
 
