@@ -1,4 +1,3 @@
-Task Manager
 Task Manager is a web-based application for managing tasks and visualizing task-related data. It features a user-friendly interface to view and complete tasks, along with data visualizations for task pass/fail rates, turn-around times, monthly open/close counts, and task type distributions. The application runs two servers: a Python Flask API for data processing and a Go server for serving the frontend and proxying API requests. A launcher script with a GUI allows starting and stopping both servers with a single button.
 Features
 
